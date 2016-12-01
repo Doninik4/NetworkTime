@@ -1,0 +1,32 @@
+
+<?import com.jfoenix.controls.JFXDatePicker?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import com.jfoenix.controls.JFXButton?>
+<?import java.net.URL?>
+<?import javafx.scene.control.DatePicker?>
+<?import com.jfoenix.controls.JFXSlider?>
+<VBox fx:controller="sample.Controller"
+      xmlns:fx="http://javafx.com/fxml" alignment="center" >
+    <HBox>
+        <Text>Select hour</Text>
+        <JFXSlider fx:id="hourSlider" min="0" max="23" value="0"></JFXSlider>
+    </HBox>
+    <HBox>
+        <Text>Select minute</Text>
+        <JFXSlider fx:id="minuteSlider" min="0" max="59" value="0" ></JFXSlider>
+    </HBox>
+    <HBox>
+        <Text>Select date</Text>
+        <JFXDatePicker fx:id="dateSelector" ></JFXDatePicker>
+    </HBox>
+
+    <JFXButton fx:id="setTimeButton" styleClass="button-raised" onAction="#setSelectedTime">
+        SET TIME
+    </JFXButton>
+    <stylesheets>
+        <URL value="@jfoenix-components.css"/>
+    </stylesheets>
+
+</VBox>
