@@ -8,7 +8,7 @@ import com.sun.jna.ptr.IntByReference;
  */
 public class LeavePrivileges {
 
-    public void leaveAllPrivileges(){
+    public static void leaveAllPrivileges(){
 
         boolean bResult = false;
         int dwError = W32Errors.ERROR_SUCCESS;

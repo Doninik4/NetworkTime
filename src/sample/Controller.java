@@ -8,6 +8,10 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.text.Text;
 
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Calendar;
@@ -26,7 +30,7 @@ public class Controller {
 
 
     @FXML
-    protected void setSelectedTime(ActionEvent event){
+    protected void setSelectedTime(ActionEvent event) throws URISyntaxException, UnsupportedEncodingException {
         LocalDate localDate = dateSelector.getValue();
         if(localDate == null){
             return;
@@ -34,11 +38,13 @@ public class Controller {
         int hour = (int) Math.round(hourSlider.getValue());
         int minute = (int)Math.round(minuteSlider.getValue());
         Calendar calendar = Calendar.getInstance();
-        calendar.setTimeZone(TimeZone.getTimeZone("GMT"));
         calendar.set(localDate.getYear(), localDate.getMonthValue() -1, localDate.getDayOfMonth(), hour, minute);
         long unixTime = calendar.getTimeInMillis() /1000;
         System.out.println("Set time to" + unixTime);
-        Shell32.INSTANCE.ShellExecute(null, "runas", "ChangeSystemTime.exe", Long.toString(unixTime), null, WinUser.SW_SHOWNORMAL);
+        String urlOfProgram = new File(Controller.class.getProtectionDomain().getCodeSource().getLocation().getPath()).getAbsoluteFile().getParent();
+        urlOfProgram = URLDecoder.decode(urlOfProgram + File.separator + "ChangeSystemTime.exe" , "UTF-8");
+        System.out.println(urlOfProgram);
+        Shell32.INSTANCE.ShellExecute(null, "open", urlOfProgram , Long.toString(unixTime), null, WinUser.SW_SHOWNORMAL);
     }
 
 

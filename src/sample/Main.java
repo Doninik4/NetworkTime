@@ -15,8 +15,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
-        LeavePrivileges lp = new LeavePrivileges();
-        lp.leaveAllPrivileges();
+        LeavePrivileges.leaveAllPrivileges();
         server = new TCPServer();
         serverThread = new Thread(server);
         serverThread.start();
