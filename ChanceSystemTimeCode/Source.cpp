@@ -8,22 +8,26 @@
 #include <time.h>
 #include <string>
 #include <regex>
+
+#pragma comment(lib,"shlwapi.lib")
+
 using namespace std;
 
 
 DWORD AdjustPrivs(HANDLE hToken, PTOKEN_PRIVILEGES pPrivs, DWORD cbPrivs)
 {
 	DWORD	i;
-	LUID	luidChangeNotify;
+	LUID	luidSystemTime;
 	BOOL	bSuccess = FALSE;
+	BOOL	hasSysTimPriv = FALSE;
 
-	LookupPrivilegeValue(NULL, SE_SYSTEMTIME_NAME, &luidChangeNotify);
+	LookupPrivilegeValue(NULL, SE_SYSTEMTIME_NAME, &luidSystemTime);
 
-	for (i = 0; i<pPrivs->PrivilegeCount; ++i)
+	for (i = 0; i < pPrivs->PrivilegeCount; ++i)
 	{
-		if (pPrivs->Privileges[i].Luid.HighPart == luidChangeNotify.HighPart && pPrivs->Privileges[i].Luid.LowPart == luidChangeNotify.LowPart)
+		if (pPrivs->Privileges[i].Luid.HighPart == luidSystemTime.HighPart && pPrivs->Privileges[i].Luid.LowPart == luidSystemTime.LowPart)
 		{
-			//  SE_SYSTEMTIME_NAME
+			hasSysTimPriv = TRUE;
 		}
 		else
 		{
@@ -32,7 +36,23 @@ DWORD AdjustPrivs(HANDLE hToken, PTOKEN_PRIVILEGES pPrivs, DWORD cbPrivs)
 		}
 	}
 
+	if (!hasSysTimPriv) {
+		TOKEN_PRIVILEGES newPrivilegesState;
+		newPrivilegesState.PrivilegeCount = 1;
+		newPrivilegesState.Privileges[0].Luid = luidSystemTime;
+		newPrivilegesState.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+		hasSysTimPriv = AdjustTokenPrivileges(hToken, FALSE, &newPrivilegesState, sizeof(TOKEN_PRIVILEGES), NULL, NULL);
+		//exit when dont have privilege
+		if (!hasSysTimPriv || GetLastError() == ERROR_NOT_ALL_ASSIGNED) {
+			free(pPrivs);
+			CloseHandle(hToken);
+			exit(1);
+		}
+
+	}
+
 	bSuccess = AdjustTokenPrivileges(hToken, FALSE, pPrivs, cbPrivs, NULL, NULL);
+
 
 	return bSuccess ? ERROR_SUCCESS : GetLastError();
 }
@@ -55,8 +75,28 @@ void UnixTimeToSystemTime(time_t t, LPSYSTEMTIME pst)
 	FileTimeToSystemTime(&ft, pst);
 }
 
+void EnableDEP()
+{
+	TCHAR	szSystemDir[MAX_PATH];
+	BOOL	bSuccess = FALSE;
+	HMODULE	hKernel32 = NULL;
+	BOOL(WINAPI *pfnSetProcessDEPPolicy)(DWORD) = NULL;
+
+	GetSystemDirectory(szSystemDir, MAX_PATH);
+	PathAppend(szSystemDir, TEXT("kernel32.dll"));
+	hKernel32 = LoadLibrary(szSystemDir);
+
+	pfnSetProcessDEPPolicy = (BOOL(WINAPI*)(DWORD))GetProcAddress(hKernel32, "SetProcessDEPPolicy");
+
+	if (pfnSetProcessDEPPolicy)
+		bSuccess = pfnSetProcessDEPPolicy(TRUE);
+
+	FreeLibrary(hKernel32);
+}
+
 
 int main(int argc, char* argv[]) {
+	EnableDEP();
 
 	BOOL				bResult = FALSE;
 	DWORD				dwError = ERROR_SUCCESS;
@@ -64,11 +104,6 @@ int main(int argc, char* argv[]) {
 	HANDLE				hToken = NULL;
 	PTOKEN_PRIVILEGES	pPrivs = NULL;
 
-	bResult = IsUserAnAdmin();
-
-	if (!bResult) {
-		exit(1);
-	}
 
 	bResult = OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, &hToken);
 	if (bResult)
@@ -108,7 +143,7 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 
-	regex timestamp("[[:digit:]]{10}");
+	regex timestamp("^[[:digit:]]{10}$");
 
 	bResult = regex_match(argv[1], timestamp);
 
@@ -123,6 +158,8 @@ int main(int argc, char* argv[]) {
 	UnixTimeToSystemTime(epoch, &newSystime);
 
 	SetSystemTime(&newSystime);
+
+
 
 
 	exit(0);
